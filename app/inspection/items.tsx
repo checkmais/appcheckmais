@@ -384,10 +384,7 @@ if (inspectionType === "technical") {
                           </Text>
                            ) : null}
                         </View>
-                        
-                        <Text style={{ fontSize: 10, color: "red" }}>
-                         {JSON.stringify(test.instruction)}
-                        </Text>
+                      
 
                       <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
                         {(["approved", "rejected", "na"] as TestStatus[]).map((status) => (
