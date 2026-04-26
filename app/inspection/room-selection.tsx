@@ -20,9 +20,28 @@ export default function RoomSelectionScreen() {
     s.toLowerCase().includes(roomName.toLowerCase())
   );
 
+  const roomsFromSelectedArea = areaType
+    ? state.rooms.filter((room) => room.areaType === areaType)
+    : [];
+
   const handleSelectSuggestion = (suggestion: string) => {
     setRoomName(suggestion);
     setShowSuggestions(false);
+  };
+
+  const continueRoom = async (room: any) => {
+    if (Platform.OS !== "web") {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    router.push({
+      pathname: "/inspection/items",
+      params: {
+        areaType: room.areaType,
+        roomName: room.roomName,
+        roomId: room.id,
+      },
+    });
   };
 
   const handleNext = async () => {
@@ -33,16 +52,22 @@ export default function RoomSelectionScreen() {
       return;
     }
 
+    const existingRoom = state.rooms.find(
+      (room) =>
+        room.areaType === areaType &&
+        room.roomName.trim().toLowerCase() === roomName.trim().toLowerCase()
+    );
+
     if (Platform.OS !== "web") {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    // Passar dados para a próxima tela via router params
     router.push({
       pathname: "/inspection/items",
       params: {
         areaType,
-        roomName: roomName.trim(),
+        roomName: existingRoom?.roomName || roomName.trim(),
+        roomId: existingRoom?.id,
       },
     });
   };
@@ -55,13 +80,11 @@ export default function RoomSelectionScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-6 pb-6">
-          {/* Header */}
           <View className="gap-2">
             <Text className="text-2xl font-bold text-foreground">Novo Cômodo</Text>
             <Text className="text-sm text-muted">Selecione o tipo de área e identifique o cômodo</Text>
           </View>
 
-          {/* Area Type Selection */}
           <View className="gap-3">
             <Text className="text-sm font-semibold text-foreground">Tipo de Área</Text>
             <View className="gap-2">
@@ -125,7 +148,32 @@ export default function RoomSelectionScreen() {
             </View>
           </View>
 
-          {/* Room Name Input */}
+          {areaType && roomsFromSelectedArea.length > 0 && (
+            <View className="gap-3">
+              <Text className="text-sm font-semibold text-foreground">
+                Checklists iniciados
+              </Text>
+
+              {roomsFromSelectedArea.map((room) => (
+                <Pressable
+                  key={room.id}
+                  onPress={() => continueRoom(room)}
+                  style={{
+                    backgroundColor: "#e0f2fe",
+                    borderColor: "#0a7ea4",
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    padding: 14,
+                  }}
+                >
+                  <Text style={{ color: "#0a7ea4", fontSize: 15, fontWeight: "700" }}>
+                    Continuar {room.roomName}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           {areaType && (
             <View className="gap-3">
               <Text className="text-sm font-semibold text-foreground">
@@ -147,7 +195,6 @@ export default function RoomSelectionScreen() {
                 placeholderTextColor="#9BA1A6"
               />
 
-              {/* Suggestions */}
               {showSuggestions && filteredSuggestions.length > 0 && (
                 <View className="border border-border rounded-lg bg-surface overflow-hidden">
                   <FlatList
@@ -176,7 +223,6 @@ export default function RoomSelectionScreen() {
             </View>
           )}
 
-          {/* Info Box */}
           <View className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <Text className="text-xs text-blue-900">
               ℹ️ Você poderá adicionar mais cômodos após finalizar este. Cada cômodo terá seu próprio
@@ -184,7 +230,6 @@ export default function RoomSelectionScreen() {
             </Text>
           </View>
 
-          {/* Navigation Buttons */}
           <View className="gap-3 mt-4">
             <LargeButton
               title="Iniciar Checklist"
