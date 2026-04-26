@@ -131,327 +131,309 @@ export default function ItemsScreen() {
   }, [existingRoom, areaType, inspectionType]);
 
   const markSectionAsNA = (sectionId: string) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) => ({
-                ...test,
-                status: "na" as TestStatus,
-              })),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  };
-
-  const updatePhotoCaption = (
-    sectionId: string,
-    testId: string,
-    photoId: string,
-    caption: string
-  ) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId
-                  ? {
-                      ...test,
-                      photos: test.photos.map((p: any) =>
-                        p.id === photoId ? { ...p, caption } : p
-                      ),
-                    }
-                  : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-  };
-
-  const updateTestStatus = (
-    sectionId: string,
-    testId: string,
-    status: TestStatus
-  ) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId
-                  ? {
-                      ...test,
-                      status,
-                      severity:
-                        status === "rejected" ? test.severity || "" : "",
-                    }
-                  : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  };
-
-  const updateTestSeverity = (
-    sectionId: string,
-    testId: string,
-    severity: string
-  ) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId ? { ...test, severity } : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-  };
-
-  const updateCustomField = (
-    sectionId: string,
-    testId: string,
-    field: "description" | "customSectionTitle" | "rejectionLegend",
-    value: string
-  ) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId
-                  ? {
-                      ...test,
-                      [field]: value,
-                    }
-                  : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-  };
-
-  const addPhotoToTest = async (
-    sectionId: string,
-    testId: string,
-    uri: string
-  ) => {
-    const manipulated = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1280 } }],
-      {
-        compress: 0.6,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
-
-    const newPhoto: PhotoWithCaption = {
-      id: Date.now().toString(),
-      uri: manipulated.uri,
-      caption: "",
-      timestamp: new Date().toISOString(),
-    };
-
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId
-                  ? { ...test, photos: [...test.photos, newPhoto] }
-                  : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-  };
-
-  const openCamera = async (sectionId: string, testId: string) => {
-    saveCurrentRoomProgress();
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      await addPhotoToTest(sectionId, testId, result.assets[0].uri);
-    }
-  };
-
-  const openGallery = async (sectionId: string, testId: string) => {
-    saveCurrentRoomProgress();
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      await addPhotoToTest(sectionId, testId, result.assets[0].uri);
-    }
-  };
-
-  const addPhoto = async (sectionId: string, testId: string) => {
-    Alert.alert("Adicionar foto", "Escolha a origem da imagem", [
-      {
-        text: "Tirar foto",
-        onPress: () => openCamera(sectionId, testId),
-      },
-      {
-        text: "Escolher da galeria",
-        onPress: () => openGallery(sectionId, testId),
-      },
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
-    ]);
-  };
-
-  const removePhoto = (sectionId: string, testId: string, photoId: string) => {
-    setSections((prev) => {
-      const updatedSections = prev.map((section: any) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              tests: section.tests.map((test: any) =>
-                test.id === testId
-                  ? {
-                      ...test,
-                      photos: test.photos.filter(
-                        (p: any) => p.id !== photoId
-                      ),
-                    }
-                  : test
-              ),
-            }
-          : section
-      );
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
-    });
-  };
-
-  const removeCustomItem = (sectionId: string, testId: string) => {
-    setSections((prev) => {
-      const updated = prev
-        .map((section: any) => {
-          if (section.id !== sectionId) return section;
-
-          const filteredTests = section.tests.filter(
-            (test: any) => test.id !== testId
-          );
-
-          return {
-            ...section,
-            tests: filteredTests,
-          };
-        })
-        .filter((section: any) => {
-          if (section.id !== "custom-items") return true;
-          return section.tests.length > 0;
-        });
-
-      if (expandedSection === sectionId) {
-        const stillExists = updated.find((s: any) => s.id === sectionId);
-        if (!stillExists) {
-          setExpandedSection(null);
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) => ({
+            ...test,
+            status: "na" as TestStatus,
+          })),
         }
-      }
+      : section
+  );
 
-      saveCurrentRoomProgress(updated);
-      return updated;
-    });
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+
+  if (Platform.OS !== "web") {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }
+};
+
+const updatePhotoCaption = (
+  sectionId: string,
+  testId: string,
+  photoId: string,
+  caption: string
+) => {
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId
+              ? {
+                  ...test,
+                  photos: test.photos.map((p: any) =>
+                    p.id === photoId ? { ...p, caption } : p
+                  ),
+                }
+              : test
+          ),
+        }
+      : section
+  );
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+};
+
+const updateTestStatus = (
+  sectionId: string,
+  testId: string,
+  status: TestStatus
+) => {
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId
+              ? {
+                  ...test,
+                  status,
+                  severity: status === "rejected" ? test.severity || "" : "",
+                }
+              : test
+          ),
+        }
+      : section
+  );
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+
+  if (Platform.OS !== "web") {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+};
+
+const updateTestSeverity = (
+  sectionId: string,
+  testId: string,
+  severity: string
+) => {
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId ? { ...test, severity } : test
+          ),
+        }
+      : section
+  );
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+};
+
+const updateCustomField = (
+  sectionId: string,
+  testId: string,
+  field: "description" | "customSectionTitle" | "rejectionLegend",
+  value: string
+) => {
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId
+              ? {
+                  ...test,
+                  [field]: value,
+                }
+              : test
+          ),
+        }
+      : section
+  );
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+};
+
+const addPhotoToTest = async (
+  sectionId: string,
+  testId: string,
+  uri: string
+) => {
+  const manipulated = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 1280 } }],
+    {
+      compress: 0.6,
+      format: ImageManipulator.SaveFormat.JPEG,
+    }
+  );
+
+  const newPhoto: PhotoWithCaption = {
+    id: Date.now().toString(),
+    uri: manipulated.uri,
+    caption: "",
+    timestamp: new Date().toISOString(),
   };
 
-  const addCustomItem = () => {
-    const customSectionId = "custom-items";
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId
+              ? { ...test, photos: [...test.photos, newPhoto] }
+              : test
+          ),
+        }
+      : section
+  );
 
-    const newTest = {
-      id: `custom-test-${Date.now()}`,
-      description: "",
-      customSectionTitle: "",
-      rejectionLegend: "",
-      status: "pending",
-      photos: [],
-      isCustom: true,
-    };
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+};
 
-    setSections((prev) => {
-      const existingCustomSection = prev.find(
-        (section: any) => section.id === customSectionId
+const openCamera = async (sectionId: string, testId: string) => {
+  saveCurrentRoomProgress();
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ["images"],
+    quality: 0.8,
+  });
+
+  if (!result.canceled && result.assets[0]) {
+    await addPhotoToTest(sectionId, testId, result.assets[0].uri);
+  }
+};
+
+const openGallery = async (sectionId: string, testId: string) => {
+  saveCurrentRoomProgress();
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ["images"],
+    quality: 0.8,
+  });
+
+  if (!result.canceled && result.assets[0]) {
+    await addPhotoToTest(sectionId, testId, result.assets[0].uri);
+  }
+};
+
+const addPhoto = async (sectionId: string, testId: string) => {
+  Alert.alert("Adicionar foto", "Escolha a origem da imagem", [
+    {
+      text: "Tirar foto",
+      onPress: () => openCamera(sectionId, testId),
+    },
+    {
+      text: "Escolher da galeria",
+      onPress: () => openGallery(sectionId, testId),
+    },
+    {
+      text: "Cancelar",
+      style: "cancel",
+    },
+  ]);
+};
+
+const removePhoto = (
+  sectionId: string,
+  testId: string,
+  photoId: string
+) => {
+  const updatedSections = sections.map((section: any) =>
+    section.id === sectionId
+      ? {
+          ...section,
+          tests: section.tests.map((test: any) =>
+            test.id === testId
+              ? {
+                  ...test,
+                  photos: test.photos.filter((p: any) => p.id !== photoId),
+                }
+              : test
+          ),
+        }
+      : section
+  );
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+};
+
+const removeCustomItem = (sectionId: string, testId: string) => {
+  const updated = sections
+    .map((section: any) => {
+      if (section.id !== sectionId) return section;
+
+      const filteredTests = section.tests.filter(
+        (test: any) => test.id !== testId
       );
 
-      let updatedSections;
-
-      if (existingCustomSection) {
-        updatedSections = prev.map((section: any) =>
-          section.id === customSectionId
-            ? {
-                ...section,
-                tests: [...section.tests, newTest],
-              }
-            : section
-        );
-      } else {
-        updatedSections = [
-          ...prev,
-          {
-            id: customSectionId,
-            title: "Itens Personalizados",
-            tests: [newTest],
-          },
-        ];
-      }
-
-      saveCurrentRoomProgress(updatedSections);
-      return updatedSections;
+      return {
+        ...section,
+        tests: filteredTests,
+      };
+    })
+    .filter((section: any) => {
+      if (section.id !== "custom-items") return true;
+      return section.tests.length > 0;
     });
 
-    setExpandedSection(customSectionId);
+  if (expandedSection === sectionId) {
+    const stillExists = updated.find((s: any) => s.id === sectionId);
+    if (!stillExists) {
+      setExpandedSection(null);
+    }
+  }
+
+  setSections(updated);
+  saveCurrentRoomProgress(updated);
+};
+
+const addCustomItem = () => {
+  const customSectionId = "custom-items";
+
+  const newTest = {
+    id: `custom-test-${Date.now()}`,
+    description: "",
+    customSectionTitle: "",
+    rejectionLegend: "",
+    status: "pending",
+    photos: [],
+    isCustom: true,
   };
+
+  const existingCustomSection = sections.find(
+    (section: any) => section.id === customSectionId
+  );
+
+  let updatedSections;
+
+  if (existingCustomSection) {
+    updatedSections = sections.map((section: any) =>
+      section.id === customSectionId
+        ? {
+            ...section,
+            tests: [...section.tests, newTest],
+          }
+        : section
+    );
+  } else {
+    updatedSections = [
+      ...sections,
+      {
+        id: customSectionId,
+        title: "Itens Personalizados",
+        tests: [newTest],
+      },
+    ];
+  }
+
+  setSections(updatedSections);
+  saveCurrentRoomProgress(updatedSections);
+  setExpandedSection(customSectionId);
+};
 
   const getSectionSummary = (section: any) => {
     const approved = section.tests.filter(
