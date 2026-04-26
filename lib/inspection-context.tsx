@@ -143,6 +143,7 @@ export interface InspectionContextType {
   addPhoto: (photo: InspectionPhoto) => void;
   updateItem: (itemId: string, data: Partial<InspectionItem>) => void;
   saveRoom: (room: RoomData) => void;
+  deleteRoom: (roomId: string) => void;
   loadInspectionState: (data: InspectionState) => void;
   setCurrentInspectionId: (id: string | null) => void;
   reset: () => Promise<void>;
@@ -210,6 +211,7 @@ type Action =
   | { type: "ADD_PHOTO"; payload: InspectionPhoto }
   | { type: "UPDATE_ITEM"; payload: { itemId: string; data: Partial<InspectionItem> } }
   | { type: "SAVE_ROOM"; payload: RoomData }
+  | { type: "DELETE_ROOM"; payload: string }
   | { type: "LOAD_INSPECTION"; payload: InspectionState }
   | { type: "SET_CURRENT_INSPECTION_ID"; payload: string | null }
   | { type: "RESET" };
@@ -294,6 +296,13 @@ function inspectionReducer(state: InspectionState, action: Action): InspectionSt
       };
     }
 
+    case "DELETE_ROOM":
+  return {
+    ...state,
+    rooms: state.rooms.filter((room) => room.id !== action.payload),
+    updatedAt: new Date().toISOString(),
+  };
+
     case "LOAD_INSPECTION":
       return {
         ...action.payload,
@@ -375,6 +384,9 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
 
     saveRoom: (room) =>
       dispatch({ type: "SAVE_ROOM", payload: room }),
+
+    deleteRoom: (roomId) =>
+       dispatch({ type: "DELETE_ROOM", payload: roomId }),
 
     loadInspectionState: (data) =>
       dispatch({ type: "LOAD_INSPECTION", payload: data }),

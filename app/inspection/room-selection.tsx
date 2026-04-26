@@ -1,4 +1,4 @@
-import { ScrollView, View, Text, Pressable, TextInput, FlatList } from "react-native";
+import { ScrollView, View, Text, Pressable, TextInput, FlatList, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ScreenContainer } from "@/components/screen-container";
@@ -10,7 +10,7 @@ import { Platform } from "react-native";
 
 export default function RoomSelectionScreen() {
   const router = useRouter();
-  const { state } = useInspection();
+  const { state, deleteRoom } = useInspection();
   const [areaType, setAreaType] = useState<AreaType | null>(null);
   const [roomName, setRoomName] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -43,6 +43,26 @@ export default function RoomSelectionScreen() {
       },
     });
   };
+
+  const handleDeleteRoom = (roomId: string) => {
+  Alert.alert(
+    "Excluir checklist",
+    "Tem certeza que deseja excluir este cômodo?",
+    [
+      {
+        text: "Cancelar",
+        style: "cancel",
+      },
+      {
+        text: "Excluir",
+        style: "destructive",
+        onPress: () => {
+          deleteRoom(roomId);
+        },
+      },
+    ]
+  );
+};
 
   const handleNext = async () => {
     if (!areaType || !roomName.trim()) {
@@ -155,22 +175,45 @@ export default function RoomSelectionScreen() {
               </Text>
 
               {roomsFromSelectedArea.map((room) => (
-                <Pressable
-                  key={room.id}
-                  onPress={() => continueRoom(room)}
-                  style={{
-                    backgroundColor: "#e0f2fe",
-                    borderColor: "#0a7ea4",
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    padding: 14,
-                  }}
-                >
-                  <Text style={{ color: "#0a7ea4", fontSize: 15, fontWeight: "700" }}>
-                    Continuar {room.roomName}
-                  </Text>
-                </Pressable>
-              ))}
+  <View
+    key={room.id}
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    }}
+  >
+    <Pressable
+      onPress={() => continueRoom(room)}
+      style={{
+        flex: 1,
+        backgroundColor: "#e0f2fe",
+        borderColor: "#0a7ea4",
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+      }}
+    >
+      <Text style={{ color: "#0a7ea4", fontSize: 15, fontWeight: "700" }}>
+        Continuar {room.roomName}
+      </Text>
+    </Pressable>
+
+    <Pressable
+      onPress={() => handleDeleteRoom(room.id)}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: "#fee2e2",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ fontSize: 18 }}>🗑️</Text>
+    </Pressable>
+  </View>
+))}
             </View>
           )}
 
