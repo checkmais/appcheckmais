@@ -53,11 +53,18 @@ export default function ItemsScreen() {
   let baseChecklist: ChecklistSection[] = SIMPLE_INTERNAL;
 
   if (inspectionType === "technical") {
-    baseChecklist = areaType === "internal" ? (TECH_INTERNAL as any) : (TECH_EXTERNAL as any);
+    baseChecklist =
+      areaType === "internal" ? (TECH_INTERNAL as any) : (TECH_EXTERNAL as any);
   } else if (inspectionType === "rental") {
-    baseChecklist = areaType === "internal" ? (RENTAL_INTERNAL as any) : (RENTAL_EXTERNAL as any);
+    baseChecklist =
+      areaType === "internal"
+        ? (RENTAL_INTERNAL as any)
+        : (RENTAL_EXTERNAL as any);
   } else {
-    baseChecklist = areaType === "internal" ? (SIMPLE_INTERNAL as any) : (SIMPLE_EXTERNAL as any);
+    baseChecklist =
+      areaType === "internal"
+        ? (SIMPLE_INTERNAL as any)
+        : (SIMPLE_EXTERNAL as any);
   }
 
   const existingRoom = parsedRoomId
@@ -77,6 +84,22 @@ export default function ItemsScreen() {
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [observations, setObservations] = useState("");
+
+  const getRoomId = () => existingRoom?.id || `${areaType}_${roomName}`;
+
+  const saveCurrentRoomProgress = (
+    updatedSections = sections,
+    updatedObservations = observations
+  ) => {
+    saveRoom({
+      id: getRoomId(),
+      roomName: roomName as string,
+      areaType: areaType as "internal" | "external",
+      sections: updatedSections,
+      observations: updatedObservations,
+      createdAt: existingRoom?.createdAt || new Date().toISOString(),
+    });
+  };
 
   useEffect(() => {
     if (existingRoom) {
@@ -108,8 +131,8 @@ export default function ItemsScreen() {
   }, [existingRoom, areaType, inspectionType]);
 
   const markSectionAsNA = (sectionId: string) => {
-    setSections((prev) =>
-      prev.map((section: any) =>
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
         section.id === sectionId
           ? {
               ...section,
@@ -119,8 +142,11 @@ export default function ItemsScreen() {
               })),
             }
           : section
-      )
-    );
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
 
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -133,8 +159,8 @@ export default function ItemsScreen() {
     photoId: string,
     caption: string
   ) => {
-    setSections((prev) =>
-      prev.map((section: any) =>
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
         section.id === sectionId
           ? {
               ...section,
@@ -150,13 +176,20 @@ export default function ItemsScreen() {
               ),
             }
           : section
-      )
-    );
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
   };
 
-  const updateTestStatus = (sectionId: string, testId: string, status: TestStatus) => {
-    setSections((prev) =>
-      prev.map((section: any) =>
+  const updateTestStatus = (
+    sectionId: string,
+    testId: string,
+    status: TestStatus
+  ) => {
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
         section.id === sectionId
           ? {
               ...section,
@@ -165,23 +198,31 @@ export default function ItemsScreen() {
                   ? {
                       ...test,
                       status,
-                      severity: status === "rejected" ? test.severity || "" : "",
+                      severity:
+                        status === "rejected" ? test.severity || "" : "",
                     }
                   : test
               ),
             }
           : section
-      )
-    );
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
 
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
-  const updateTestSeverity = (sectionId: string, testId: string, severity: string) => {
-    setSections((prev) =>
-      prev.map((section: any) =>
+  const updateTestSeverity = (
+    sectionId: string,
+    testId: string,
+    severity: string
+  ) => {
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
         section.id === sectionId
           ? {
               ...section,
@@ -190,166 +231,239 @@ export default function ItemsScreen() {
               ),
             }
           : section
-      )
-    );
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
   };
 
   const updateCustomField = (
-  sectionId: string,
-  testId: string,
-  field: "description" | "customSectionTitle" | "rejectionLegend",
-  value: string
-) => {
-  setSections((prev) =>
-    prev.map((section: any) =>
-      section.id === sectionId
-        ? {
-            ...section,
-            tests: section.tests.map((test: any) =>
-              test.id === testId
-                ? {
-                    ...test,
-                    [field]: value,
-                  }
-                : test
-            ),
-          }
-        : section
-    )
-  );
-};
+    sectionId: string,
+    testId: string,
+    field: "description" | "customSectionTitle" | "rejectionLegend",
+    value: string
+  ) => {
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              tests: section.tests.map((test: any) =>
+                test.id === testId
+                  ? {
+                      ...test,
+                      [field]: value,
+                    }
+                  : test
+              ),
+            }
+          : section
+      );
 
-  const addPhoto = async (sectionId: string, testId: string) => {
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
+  };
+
+  const addPhotoToTest = async (
+    sectionId: string,
+    testId: string,
+    uri: string
+  ) => {
+    const manipulated = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1280 } }],
+      {
+        compress: 0.6,
+        format: ImageManipulator.SaveFormat.JPEG,
+      }
+    );
+
+    const newPhoto: PhotoWithCaption = {
+      id: Date.now().toString(),
+      uri: manipulated.uri,
+      caption: "",
+      timestamp: new Date().toISOString(),
+    };
+
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              tests: section.tests.map((test: any) =>
+                test.id === testId
+                  ? { ...test, photos: [...test.photos, newPhoto] }
+                  : test
+              ),
+            }
+          : section
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
+  };
+
+  const openCamera = async (sectionId: string, testId: string) => {
+    saveCurrentRoomProgress();
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
-      const manipulated = await ImageManipulator.manipulateAsync(
-  result.assets[0].uri,
-  [{ resize: { width: 1280 } }],
-  {
-    compress: 0.6,
-    format: ImageManipulator.SaveFormat.JPEG,
-  }
-);
-
-const newPhoto: PhotoWithCaption = {
-  id: Date.now().toString(),
-  uri: manipulated.uri,
-  caption: "",
-  timestamp: new Date().toISOString(),
-};
-
-      setSections((prev) =>
-        prev.map((section: any) =>
-          section.id === sectionId
-            ? {
-                ...section,
-                tests: section.tests.map((test: any) =>
-                  test.id === testId
-                    ? { ...test, photos: [...test.photos, newPhoto] }
-                    : test
-                ),
-              }
-            : section
-        )
-      );
+      await addPhotoToTest(sectionId, testId, result.assets[0].uri);
     }
   };
 
+  const openGallery = async (sectionId: string, testId: string) => {
+    saveCurrentRoomProgress();
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await addPhotoToTest(sectionId, testId, result.assets[0].uri);
+    }
+  };
+
+  const addPhoto = async (sectionId: string, testId: string) => {
+    Alert.alert("Adicionar foto", "Escolha a origem da imagem", [
+      {
+        text: "Tirar foto",
+        onPress: () => openCamera(sectionId, testId),
+      },
+      {
+        text: "Escolher da galeria",
+        onPress: () => openGallery(sectionId, testId),
+      },
+      {
+        text: "Cancelar",
+        style: "cancel",
+      },
+    ]);
+  };
+
   const removePhoto = (sectionId: string, testId: string, photoId: string) => {
-    setSections((prev) =>
-      prev.map((section: any) =>
+    setSections((prev) => {
+      const updatedSections = prev.map((section: any) =>
         section.id === sectionId
           ? {
               ...section,
               tests: section.tests.map((test: any) =>
                 test.id === testId
-                  ? { ...test, photos: test.photos.filter((p: any) => p.id !== photoId) }
+                  ? {
+                      ...test,
+                      photos: test.photos.filter(
+                        (p: any) => p.id !== photoId
+                      ),
+                    }
                   : test
               ),
             }
           : section
-      )
-    );
+      );
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
   };
 
   const removeCustomItem = (sectionId: string, testId: string) => {
-  setSections((prev) => {
-    const updated = prev
-      .map((section: any) => {
-        if (section.id !== sectionId) return section;
+    setSections((prev) => {
+      const updated = prev
+        .map((section: any) => {
+          if (section.id !== sectionId) return section;
 
-        const filteredTests = section.tests.filter((test: any) => test.id !== testId);
+          const filteredTests = section.tests.filter(
+            (test: any) => test.id !== testId
+          );
 
-        return {
-          ...section,
-          tests: filteredTests,
-        };
-      })
-      .filter((section: any) => {
-        if (section.id !== "custom-items") return true;
-        return section.tests.length > 0;
-      });
+          return {
+            ...section,
+            tests: filteredTests,
+          };
+        })
+        .filter((section: any) => {
+          if (section.id !== "custom-items") return true;
+          return section.tests.length > 0;
+        });
 
-    if (expandedSection === sectionId) {
-      const stillExists = updated.find((s: any) => s.id === sectionId);
-      if (!stillExists) {
-        setExpandedSection(null);
+      if (expandedSection === sectionId) {
+        const stillExists = updated.find((s: any) => s.id === sectionId);
+        if (!stillExists) {
+          setExpandedSection(null);
+        }
       }
-    }
 
-    return updated;
-  });
-};
-
-  const addCustomItem = () => {
-  const customSectionId = "custom-items";
-
-  const newTest = {
-    id: `custom-test-${Date.now()}`,
-    description: "",
-    customSectionTitle: "",
-    rejectionLegend: "",
-    status: "pending",
-    photos: [],
-    isCustom: true,
+      saveCurrentRoomProgress(updated);
+      return updated;
+    });
   };
 
-  setSections((prev) => {
-    const existingCustomSection = prev.find((section: any) => section.id === customSectionId);
+  const addCustomItem = () => {
+    const customSectionId = "custom-items";
 
-    if (existingCustomSection) {
-      return prev.map((section: any) =>
-        section.id === customSectionId
-          ? {
-              ...section,
-              tests: [...section.tests, newTest],
-            }
-          : section
+    const newTest = {
+      id: `custom-test-${Date.now()}`,
+      description: "",
+      customSectionTitle: "",
+      rejectionLegend: "",
+      status: "pending",
+      photos: [],
+      isCustom: true,
+    };
+
+    setSections((prev) => {
+      const existingCustomSection = prev.find(
+        (section: any) => section.id === customSectionId
       );
-    }
 
-    return [
-      ...prev,
-      {
-        id: customSectionId,
-        title: "Itens Personalizados",
-        tests: [newTest],
-      },
-    ];
-  });
+      let updatedSections;
 
-  setExpandedSection(customSectionId);
-};
+      if (existingCustomSection) {
+        updatedSections = prev.map((section: any) =>
+          section.id === customSectionId
+            ? {
+                ...section,
+                tests: [...section.tests, newTest],
+              }
+            : section
+        );
+      } else {
+        updatedSections = [
+          ...prev,
+          {
+            id: customSectionId,
+            title: "Itens Personalizados",
+            tests: [newTest],
+          },
+        ];
+      }
+
+      saveCurrentRoomProgress(updatedSections);
+      return updatedSections;
+    });
+
+    setExpandedSection(customSectionId);
+  };
 
   const getSectionSummary = (section: any) => {
-    const approved = section.tests.filter((t: any) => t.status === "approved").length;
-    const rejected = section.tests.filter((t: any) => t.status === "rejected").length;
+    const approved = section.tests.filter(
+      (t: any) => t.status === "approved"
+    ).length;
+    const rejected = section.tests.filter(
+      (t: any) => t.status === "rejected"
+    ).length;
     const na = section.tests.filter((t: any) => t.status === "na").length;
-    const pending = section.tests.filter((t: any) => t.status === "pending").length;
+    const pending = section.tests.filter(
+      (t: any) => t.status === "pending"
+    ).length;
     return { approved, rejected, na, pending, total: section.tests.length };
   };
 
@@ -392,31 +506,26 @@ const newPhoto: PhotoWithCaption = {
     }
 
     if (Platform.OS !== "web") {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success
+      );
     }
 
-    saveRoom({
-      id: existingRoom?.id || `${areaType}_${roomName}_${Date.now()}`,
-      roomName: roomName as string,
-      areaType: areaType as "internal" | "external",
-      sections,
-      observations,
-      createdAt: existingRoom?.createdAt || new Date().toISOString(),
-    });
+    saveCurrentRoomProgress();
 
     router.push("/inspection/summary");
   };
 
   const summary = getTotalSummary();
 
-  const statusConfig: Record<TestStatus, { label: string; activeBg: string }> = {
-    pending: { label: "Pendente", activeBg: "#f5f5f5" },
-    approved: { label: "Aprovado", activeBg: "#16a34a" },
-    rejected: { label: "Reprovado", activeBg: "#dc2626" },
-    na: { label: "N/A", activeBg: "#9ca3af" },
-  };
-
-  return (
+  const statusConfig: Record<TestStatus, { label: string; activeBg: string }> =
+    {
+      pending: { label: "Pendente", activeBg: "#f5f5f5" },
+      approved: { label: "Aprovado", activeBg: "#16a34a" },
+      rejected: { label: "Reprovado", activeBg: "#dc2626" },
+      na: { label: "N/A", activeBg: "#9ca3af" },
+    };
+      return (
     <ScreenContainer className="p-0">
       <View
         style={{
@@ -426,17 +535,40 @@ const newPhoto: PhotoWithCaption = {
           borderBottomColor: "#e5e7eb",
         }}
       >
-        <Text style={{ fontSize: 20, fontWeight: "700", color: "#111" }}>{roomName}</Text>
+        <Text style={{ fontSize: 20, fontWeight: "700", color: "#111" }}>
+          {roomName}
+        </Text>
         <Text style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
-          {areaType === "internal" ? "Área Interna" : "Área Externa"} • Etapa 3 de 4
+          {areaType === "internal" ? "Área Interna" : "Área Externa"} • Etapa
+          3 de 4
         </Text>
 
         <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
           {[
-            { label: "Aprovados", value: summary.approved, color: "#16a34a", bg: "#dcfce7" },
-            { label: "Reprovados", value: summary.rejected, color: "#dc2626", bg: "#fee2e2" },
-            { label: "Pendentes", value: summary.pending, color: "#d97706", bg: "#fef3c7" },
-            { label: "N/A", value: summary.na, color: "#6b7280", bg: "#f3f4f6" },
+            {
+              label: "Aprovados",
+              value: summary.approved,
+              color: "#16a34a",
+              bg: "#dcfce7",
+            },
+            {
+              label: "Reprovados",
+              value: summary.rejected,
+              color: "#dc2626",
+              bg: "#fee2e2",
+            },
+            {
+              label: "Pendentes",
+              value: summary.pending,
+              color: "#d97706",
+              bg: "#fef3c7",
+            },
+            {
+              label: "N/A",
+              value: summary.na,
+              color: "#6b7280",
+              bg: "#f3f4f6",
+            },
           ].map((item) => (
             <View
               key={item.label}
@@ -448,7 +580,13 @@ const newPhoto: PhotoWithCaption = {
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontSize: 18, fontWeight: "700", color: item.color }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: item.color,
+                }}
+              >
                 {item.value}
               </Text>
               <Text style={{ fontSize: 9, color: item.color, marginTop: 1 }}>
@@ -480,7 +618,9 @@ const newPhoto: PhotoWithCaption = {
               }}
             >
               <Pressable
-                onPress={() => setExpandedSection(isExpanded ? null : section.id)}
+                onPress={() =>
+                  setExpandedSection(isExpanded ? null : section.id)
+                }
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -490,7 +630,9 @@ const newPhoto: PhotoWithCaption = {
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#111" }}>
+                  <Text
+                    style={{ fontSize: 13, fontWeight: "600", color: "#111" }}
+                  >
                     {section.title}
                   </Text>
                   <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
@@ -517,25 +659,38 @@ const newPhoto: PhotoWithCaption = {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
                   <Pressable
                     onPress={() => markSectionAsNA(section.id)}
                     style={{
                       paddingHorizontal: 10,
                       paddingVertical: 4,
                       backgroundColor:
-                        sectionSummary.na === sectionSummary.total ? "#9ca3af" : "#f3f4f6",
+                        sectionSummary.na === sectionSummary.total
+                          ? "#9ca3af"
+                          : "#f3f4f6",
                       borderRadius: 99,
                       borderWidth: 0.5,
                       borderColor:
-                        sectionSummary.na === sectionSummary.total ? "#9ca3af" : "#e5e7eb",
+                        sectionSummary.na === sectionSummary.total
+                          ? "#9ca3af"
+                          : "#e5e7eb",
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 11,
                         fontWeight: "600",
-                        color: sectionSummary.na === sectionSummary.total ? "white" : "#6b7280",
+                        color:
+                          sectionSummary.na === sectionSummary.total
+                            ? "white"
+                            : "#6b7280",
                       }}
                     >
                       N/A Tudo
@@ -555,309 +710,385 @@ const newPhoto: PhotoWithCaption = {
                       key={test.id}
                       style={{
                         paddingBottom: 12,
-                        borderBottomWidth: index < section.tests.length - 1 ? 0.5 : 0,
+                        borderBottomWidth:
+                          index < section.tests.length - 1 ? 0.5 : 0,
                         borderBottomColor: "#f0f0f0",
                       }}
                     >
                       <View style={{ marginBottom: 8 }}>
-  {test.isCustom ? (
-  <View style={{ gap: 8 }}>
-    <View
-      style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 12,
-          fontWeight: "700",
-          color: "#0a7ea4",
-        }}
-      >
-        Item personalizado
-      </Text>
-
-      <Pressable
-        onPress={() => removeCustomItem(section.id, test.id)}
-        style={{
-          paddingHorizontal: 10,
-          paddingVertical: 6,
-          borderRadius: 8,
-          backgroundColor: "#fee2e2",
-          borderWidth: 0.5,
-          borderColor: "#fecaca",
-        }}
-      >
-        <Text
-          style={{
-            color: "#dc2626",
-            fontSize: 11,
-            fontWeight: "700",
-          }}
-        >
-          Excluir
-        </Text>
-      </Pressable>
-    </View>
-      <TextInput
-        placeholder="Nome do item"
-        value={test.customSectionTitle || ""}
-        onChangeText={(text) =>
-          updateCustomField(section.id, test.id, "customSectionTitle", text)
-        }
-        style={{
-          borderWidth: 0.5,
-          borderColor: "#e5e7eb",
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          fontSize: 12,
-          color: "#333",
-          backgroundColor: "#fff",
-        }}
-        placeholderTextColor="#9ca3af"
-      />
-
-      <TextInput
-        placeholder="Nome do teste"
-        value={test.description || ""}
-        onChangeText={(text) =>
-          updateCustomField(section.id, test.id, "description", text)
-        }
-        style={{
-          borderWidth: 0.5,
-          borderColor: "#e5e7eb",
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          fontSize: 12,
-          color: "#333",
-          backgroundColor: "#fff",
-        }}
-        placeholderTextColor="#9ca3af"
-      />
-
-      {test.status === "rejected" && (
-        <TextInput
-          placeholder="Legenda / motivo da reprovação"
-          value={test.rejectionLegend || ""}
-          onChangeText={(text) =>
-            updateCustomField(section.id, test.id, "rejectionLegend", text)
-          }
-          style={{
-            borderWidth: 0.5,
-            borderColor: "#e5e7eb",
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-            fontSize: 12,
-            color: "#333",
-            backgroundColor: "#fff",
-          }}
-          placeholderTextColor="#9ca3af"
-        />
-      )}
-    </View>
-  ) : (
-    <>
-      <Text
-        style={{
-          fontSize: 13,
-          color: "#333",
-          lineHeight: 18,
-          fontWeight: "600",
-        }}
-      >
-        {test.description}
-      </Text>
-
-      {inspectionType === "technical" && test.stepByStep?.length > 0 ? (
-        <View style={{ marginTop: 6 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "700",
-              color: "#444",
-              marginBottom: 4,
-            }}
-          >
-            Passo a passo
-          </Text>
-
-          {test.stepByStep.map((step: string, idx: number) => (
-            <Text
-              key={`${test.id}_step_${idx}`}
-              style={{
-                fontSize: 11,
-                color: "#666",
-                lineHeight: 16,
-                marginBottom: 2,
-              }}
-            >
-              • {step}
-            </Text>
-          ))}
-        </View>
-      ) : test.instruction ? (
-        <Text
-          style={{
-            fontSize: 11,
-            color: "#666",
-            marginTop: 2,
-            lineHeight: 16,
-          }}
-        >
-          {test.instruction}
-        </Text>
-      ) : null}
-
-      {inspectionType === "technical" && test.objectiveCriteria ? (
-        <View style={{ marginTop: 8 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "700",
-              color: "#444",
-              marginBottom: 4,
-            }}
-          >
-            Critério objetivo
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 11,
-              color: "#666",
-              lineHeight: 16,
-              marginBottom: 2,
-            }}
-          >
-            <Text style={{ fontWeight: "700" }}>Aprovado:</Text>{" "}
-            {test.objectiveCriteria.approved}
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 11,
-              color: "#666",
-              lineHeight: 16,
-              marginBottom: 2,
-            }}
-          >
-            <Text style={{ fontWeight: "700" }}>Reprovado:</Text>{" "}
-            {test.objectiveCriteria.rejected}
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 11,
-              color: "#666",
-              lineHeight: 16,
-            }}
-          >
-            <Text style={{ fontWeight: "700" }}>N/A:</Text>{" "}
-            {test.objectiveCriteria.na}
-          </Text>
-        </View>
-      ) : null}
-    </>
-  )}
-</View>
-
-                      <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
-                        {(["approved", "rejected", "na"] as TestStatus[]).map((status) => (
-                          <Pressable
-                            key={status}
-                            onPress={() => updateTestStatus(section.id, test.id, status)}
-                            style={{
-                              flex: 1,
-                              paddingVertical: 7,
-                              borderRadius: 8,
-                              alignItems: "center",
-                              backgroundColor:
-                                test.status === status ? statusConfig[status].activeBg : "#f5f5f5",
-                              borderWidth: 0.5,
-                              borderColor:
-                                test.status === status ? statusConfig[status].activeBg : "#e5e7eb",
-                            }}
-                          >
-                            <Text
+                        {test.isCustom ? (
+                          <View style={{ gap: 8 }}>
+                            <View
                               style={{
-                                fontSize: 11,
-                                fontWeight: "600",
-                                color: test.status === status ? "white" : "#666",
-                              }}
-                            >
-                              {statusConfig[status].label}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-
-                      {inspectionType === "technical" && test.status === "rejected" && (
-                        <View style={{ marginTop: 8, gap: 8 }}>
-                          <Text style={{ fontSize: 12, fontWeight: "600", color: "#333" }}>
-                            Criticidade da não conformidade
-                          </Text>
-
-                          {[
-                            {
-                              key: "low",
-                              label: "Baixa",
-                              desc: test.criticality?.low?.label || "Baixa criticidade",
-                            },
-                            {
-                              key: "medium",
-                              label: "Média",
-                              desc: test.criticality?.medium?.label || "Média criticidade",
-                            },
-                            {
-                              key: "high",
-                              label: "Alta",
-                              desc: test.criticality?.high?.label || "Alta criticidade",
-                            },
-                          ].map((level) => (
-                            <Pressable
-                              key={level.key}
-                              onPress={() => updateTestSeverity(section.id, test.id, level.key)}
-                              style={{
-                                padding: 10,
-                                borderRadius: 8,
-                                backgroundColor:
-                                  test.severity === level.key ? "#e0f2fe" : "#f8fafc",
-                                borderWidth: 1,
-                                borderColor:
-                                  test.severity === level.key ? "#0a7ea4" : "#e5e7eb",
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                alignItems: "center",
                               }}
                             >
                               <Text
                                 style={{
                                   fontSize: 12,
                                   fontWeight: "700",
-                                  color: test.severity === level.key ? "#0a7ea4" : "#333",
-                                  marginBottom: 2,
+                                  color: "#0a7ea4",
                                 }}
                               >
-                                {level.label}
+                                Item personalizado
                               </Text>
 
+                              <Pressable
+                                onPress={() =>
+                                  removeCustomItem(section.id, test.id)
+                                }
+                                style={{
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
+                                  backgroundColor: "#fee2e2",
+                                  borderWidth: 0.5,
+                                  borderColor: "#fecaca",
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: "#dc2626",
+                                    fontSize: 11,
+                                    fontWeight: "700",
+                                  }}
+                                >
+                                  Excluir
+                                </Text>
+                              </Pressable>
+                            </View>
+                            <TextInput
+                              placeholder="Nome do item"
+                              value={test.customSectionTitle || ""}
+                              onChangeText={(text) =>
+                                updateCustomField(
+                                  section.id,
+                                  test.id,
+                                  "customSectionTitle",
+                                  text
+                                )
+                              }
+                              style={{
+                                borderWidth: 0.5,
+                                borderColor: "#e5e7eb",
+                                borderRadius: 8,
+                                paddingHorizontal: 10,
+                                paddingVertical: 8,
+                                fontSize: 12,
+                                color: "#333",
+                                backgroundColor: "#fff",
+                              }}
+                              placeholderTextColor="#9ca3af"
+                            />
+
+                            <TextInput
+                              placeholder="Nome do teste"
+                              value={test.description || ""}
+                              onChangeText={(text) =>
+                                updateCustomField(
+                                  section.id,
+                                  test.id,
+                                  "description",
+                                  text
+                                )
+                              }
+                              style={{
+                                borderWidth: 0.5,
+                                borderColor: "#e5e7eb",
+                                borderRadius: 8,
+                                paddingHorizontal: 10,
+                                paddingVertical: 8,
+                                fontSize: 12,
+                                color: "#333",
+                                backgroundColor: "#fff",
+                              }}
+                              placeholderTextColor="#9ca3af"
+                            />
+
+                            {test.status === "rejected" && (
+                              <TextInput
+                                placeholder="Legenda / motivo da reprovação"
+                                value={test.rejectionLegend || ""}
+                                onChangeText={(text) =>
+                                  updateCustomField(
+                                    section.id,
+                                    test.id,
+                                    "rejectionLegend",
+                                    text
+                                  )
+                                }
+                                style={{
+                                  borderWidth: 0.5,
+                                  borderColor: "#e5e7eb",
+                                  borderRadius: 8,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 8,
+                                  fontSize: 12,
+                                  color: "#333",
+                                  backgroundColor: "#fff",
+                                }}
+                                placeholderTextColor="#9ca3af"
+                              />
+                            )}
+                          </View>
+                        ) : (
+                          <>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                color: "#333",
+                                lineHeight: 18,
+                                fontWeight: "600",
+                              }}
+                            >
+                              {test.description}
+                            </Text>
+
+                            {inspectionType === "technical" &&
+                            test.stepByStep?.length > 0 ? (
+                              <View style={{ marginTop: 6 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: "700",
+                                    color: "#444",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Passo a passo
+                                </Text>
+
+                                {test.stepByStep.map(
+                                  (step: string, idx: number) => (
+                                    <Text
+                                      key={`${test.id}_step_${idx}`}
+                                      style={{
+                                        fontSize: 11,
+                                        color: "#666",
+                                        lineHeight: 16,
+                                        marginBottom: 2,
+                                      }}
+                                    >
+                                      • {step}
+                                    </Text>
+                                  )
+                                )}
+                              </View>
+                            ) : test.instruction ? (
                               <Text
                                 style={{
                                   fontSize: 11,
                                   color: "#666",
-                                  lineHeight: 15,
+                                  marginTop: 2,
+                                  lineHeight: 16,
                                 }}
                               >
-                                {level.desc}
+                                {test.instruction}
+                              </Text>
+                            ) : null}
+
+                            {inspectionType === "technical" &&
+                            test.objectiveCriteria ? (
+                              <View style={{ marginTop: 8 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: "700",
+                                    color: "#444",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Critério objetivo
+                                </Text>
+
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#666",
+                                    lineHeight: 16,
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  <Text style={{ fontWeight: "700" }}>
+                                    Aprovado:
+                                  </Text>{" "}
+                                  {test.objectiveCriteria.approved}
+                                </Text>
+
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#666",
+                                    lineHeight: 16,
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  <Text style={{ fontWeight: "700" }}>
+                                    Reprovado:
+                                  </Text>{" "}
+                                  {test.objectiveCriteria.rejected}
+                                </Text>
+
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#666",
+                                    lineHeight: 16,
+                                  }}
+                                >
+                                  <Text style={{ fontWeight: "700" }}>
+                                    N/A:
+                                  </Text>{" "}
+                                  {test.objectiveCriteria.na}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </>
+                        )}
+                      </View>
+
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          gap: 6,
+                          marginBottom: 8,
+                        }}
+                      >
+                        {(["approved", "rejected", "na"] as TestStatus[]).map(
+                          (status) => (
+                            <Pressable
+                              key={status}
+                              onPress={() =>
+                                updateTestStatus(section.id, test.id, status)
+                              }
+                              style={{
+                                flex: 1,
+                                paddingVertical: 7,
+                                borderRadius: 8,
+                                alignItems: "center",
+                                backgroundColor:
+                                  test.status === status
+                                    ? statusConfig[status].activeBg
+                                    : "#f5f5f5",
+                                borderWidth: 0.5,
+                                borderColor:
+                                  test.status === status
+                                    ? statusConfig[status].activeBg
+                                    : "#e5e7eb",
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: "600",
+                                  color:
+                                    test.status === status ? "white" : "#666",
+                                }}
+                              >
+                                {statusConfig[status].label}
                               </Text>
                             </Pressable>
-                          ))}
-                        </View>
-                      )}
+                          )
+                        )}
+                      </View>
 
-                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {inspectionType === "technical" &&
+                        test.status === "rejected" && (
+                          <View style={{ marginTop: 8, gap: 8 }}>
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: "600",
+                                color: "#333",
+                              }}
+                            >
+                              Criticidade da não conformidade
+                            </Text>
+
+                            {[
+                              {
+                                key: "low",
+                                label: "Baixa",
+                                desc:
+                                  test.criticality?.low?.label ||
+                                  "Baixa criticidade",
+                              },
+                              {
+                                key: "medium",
+                                label: "Média",
+                                desc:
+                                  test.criticality?.medium?.label ||
+                                  "Média criticidade",
+                              },
+                              {
+                                key: "high",
+                                label: "Alta",
+                                desc:
+                                  test.criticality?.high?.label ||
+                                  "Alta criticidade",
+                              },
+                            ].map((level) => (
+                              <Pressable
+                                key={level.key}
+                                onPress={() =>
+                                  updateTestSeverity(
+                                    section.id,
+                                    test.id,
+                                    level.key
+                                  )
+                                }
+                                style={{
+                                  padding: 10,
+                                  borderRadius: 8,
+                                  backgroundColor:
+                                    test.severity === level.key
+                                      ? "#e0f2fe"
+                                      : "#f8fafc",
+                                  borderWidth: 1,
+                                  borderColor:
+                                    test.severity === level.key
+                                      ? "#0a7ea4"
+                                      : "#e5e7eb",
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: "700",
+                                    color:
+                                      test.severity === level.key
+                                        ? "#0a7ea4"
+                                        : "#333",
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  {level.label}
+                                </Text>
+
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#666",
+                                    lineHeight: 15,
+                                  }}
+                                >
+                                  {level.desc}
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        )}
+
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          marginTop: 8,
+                        }}
+                      >
                         {test.photos.map((photo: any) => (
                           <View key={photo.id} style={{ position: "relative" }}>
                             <Image
@@ -865,7 +1096,9 @@ const newPhoto: PhotoWithCaption = {
                               style={{ width: 64, height: 64, borderRadius: 8 }}
                             />
                             <Pressable
-                              onPress={() => removePhoto(section.id, test.id, photo.id)}
+                              onPress={() =>
+                                removePhoto(section.id, test.id, photo.id)
+                              }
                               style={{
                                 position: "absolute",
                                 top: -4,
@@ -878,7 +1111,13 @@ const newPhoto: PhotoWithCaption = {
                                 justifyContent: "center",
                               }}
                             >
-                              <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
+                              <Text
+                                style={{
+                                  color: "white",
+                                  fontSize: 10,
+                                  fontWeight: "700",
+                                }}
+                              >
                                 ✕
                               </Text>
                             </Pressable>
@@ -898,7 +1137,9 @@ const newPhoto: PhotoWithCaption = {
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ fontSize: 20, color: "#9ca3af" }}>📷</Text>
+                          <Text style={{ fontSize: 20, color: "#9ca3af" }}>
+                            📷
+                          </Text>
                         </Pressable>
                       </View>
 
@@ -907,17 +1148,32 @@ const newPhoto: PhotoWithCaption = {
                           {test.photos.map((photo: any, photoIndex: number) => (
                             <View
                               key={photo.id}
-                              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
                             >
                               <Image
                                 source={{ uri: photo.uri }}
-                                style={{ width: 32, height: 32, borderRadius: 4 }}
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 4,
+                                }}
                               />
                               <TextInput
-                                placeholder={`Legenda da foto ${photoIndex + 1}...`}
+                                placeholder={`Legenda da foto ${
+                                  photoIndex + 1
+                                }...`}
                                 value={photo.caption}
                                 onChangeText={(text) =>
-                                  updatePhotoCaption(section.id, test.id, photo.id, text)
+                                  updatePhotoCaption(
+                                    section.id,
+                                    test.id,
+                                    photo.id,
+                                    text
+                                  )
                                 }
                                 style={{
                                   flex: 1,
@@ -936,11 +1192,18 @@ const newPhoto: PhotoWithCaption = {
                         </View>
                       )}
 
-                      {test.status === "rejected" && test.photos.length === 0 && (
-                        <Text style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>
-                          ⚠ Foto obrigatória para itens reprovados
-                        </Text>
-                      )}
+                      {test.status === "rejected" &&
+                        test.photos.length === 0 && (
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              color: "#dc2626",
+                              marginTop: 4,
+                            }}
+                          >
+                            ⚠ Foto obrigatória para itens reprovados
+                          </Text>
+                        )}
                     </View>
                   ))}
                 </View>
@@ -950,35 +1213,42 @@ const newPhoto: PhotoWithCaption = {
         })}
 
         {inspectionType === "simple" && (
-  <Pressable
-    onPress={addCustomItem}
-    style={{
-      marginTop: 4,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderStyle: "dashed",
-      borderColor: "#0a7ea4",
-      borderRadius: 10,
-      paddingVertical: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#f8fbff",
-    }}
-  >
-    <Text
-      style={{
-        color: "#0a7ea4",
-        fontWeight: "700",
-        fontSize: 14,
-      }}
-    >
-      + Item personalizado
-    </Text>
-  </Pressable>
-)}
+          <Pressable
+            onPress={addCustomItem}
+            style={{
+              marginTop: 4,
+              marginBottom: 10,
+              borderWidth: 1,
+              borderStyle: "dashed",
+              borderColor: "#0a7ea4",
+              borderRadius: 10,
+              paddingVertical: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#f8fbff",
+            }}
+          >
+            <Text
+              style={{
+                color: "#0a7ea4",
+                fontWeight: "700",
+                fontSize: 14,
+              }}
+            >
+              + Item personalizado
+            </Text>
+          </Pressable>
+        )}
 
         <View style={{ marginTop: 4, marginBottom: 8 }}>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: "#333", marginBottom: 6 }}>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "600",
+              color: "#333",
+              marginBottom: 6,
+            }}
+          >
             Observações gerais
           </Text>
           <TextInput
@@ -986,7 +1256,10 @@ const newPhoto: PhotoWithCaption = {
             numberOfLines={3}
             placeholder="Alguma observação sobre este cômodo..."
             value={observations}
-            onChangeText={setObservations}
+            onChangeText={(text) => {
+              setObservations(text);
+              saveCurrentRoomProgress(sections, text);
+            }}
             style={{
               borderWidth: 0.5,
               borderColor: "#e5e7eb",
@@ -1002,9 +1275,23 @@ const newPhoto: PhotoWithCaption = {
         </View>
 
         <View style={{ gap: 10, marginTop: 8 }}>
-          <LargeButton title="Salvar e continuar →" onPress={handleNext} variant="primary" />
-          <Pressable onPress={() => router.back()} style={{ alignItems: "center", padding: 10 }}>
-            <Text style={{ color: "#0a7ea4", fontWeight: "600", fontSize: 14 }}>Voltar</Text>
+          <LargeButton
+            title="Salvar e continuar →"
+            onPress={handleNext}
+            variant="primary"
+          />
+          <Pressable
+            onPress={() => {
+              saveCurrentRoomProgress();
+              router.back();
+            }}
+            style={{ alignItems: "center", padding: 10 }}
+          >
+            <Text
+              style={{ color: "#0a7ea4", fontWeight: "600", fontSize: 14 }}
+            >
+              Voltar
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
