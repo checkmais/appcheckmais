@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
@@ -508,16 +509,21 @@ const addCustomItem = () => {
       na: { label: "N/A", activeBg: "#9ca3af" },
     };
       return (
-    <ScreenContainer className="p-0">
-      <View
-        style={{
-          padding: 16,
-          paddingBottom: 8,
-          borderBottomWidth: 0.5,
-          borderBottomColor: "#e5e7eb",
-        }}
-      >
-        <Text style={{ fontSize: 20, fontWeight: "700", color: "#111" }}>
+  <ScreenContainer className="p-0">
+    <KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+>
+  <View
+    style={{
+      padding: 16,
+      paddingBottom: 8,
+      borderBottomWidth: 0.5,
+      borderBottomColor: "#e5e7eb",
+    }}
+  >
+    <Text style={{ fontSize: 20, fontWeight: "700", color: "#111" }}>
           {roomName}
         </Text>
         <Text style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
@@ -581,8 +587,10 @@ const addCustomItem = () => {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 12, paddingBottom: 24 }}
+        contentContainerStyle={{ padding: 12, paddingBottom: 260 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {sections.map((section: any) => {
           const sectionSummary = getSectionSummary(section);
@@ -1276,7 +1284,8 @@ const addCustomItem = () => {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </ScreenContainer>
-  );
+            </ScrollView>
+    </KeyboardAvoidingView>
+  </ScreenContainer>
+);
 }
