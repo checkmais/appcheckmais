@@ -234,6 +234,94 @@ function getCurrentTime() {
               </View>
 
               <View className="gap-3">
+  <Text className="text-lg font-semibold text-foreground">Limpeza</Text>
+
+  <View className="flex-row gap-2 flex-wrap">
+    {["clean", "regular", "dirty"].map((cleaning) => (
+      <Pressable
+        key={cleaning}
+        onPress={() => updateConditions({ cleaning: cleaning as any })}
+        className={`px-4 py-2 rounded-full border ${
+          state.conditions.cleaning === cleaning
+            ? "bg-primary border-primary"
+            : "bg-surface border-border"
+        }`}
+      >
+        <Text
+          className={
+            state.conditions.cleaning === cleaning
+              ? "text-background font-semibold"
+              : "text-foreground"
+          }
+        >
+          {cleaning === "clean"
+            ? "Limpo"
+            : cleaning === "regular"
+            ? "Regular"
+            : "Sujo"}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+</View>
+
+<View className="gap-3">
+  <Text className="text-lg font-semibold text-foreground">Energia</Text>
+
+  <View className="flex-row gap-2">
+    {["on", "off"].map((energy) => (
+      <Pressable
+        key={energy}
+        onPress={() => updateConditions({ energy: energy as any })}
+        className={`flex-1 px-4 py-3 rounded-xl border ${
+          state.conditions.energy === energy
+            ? "bg-primary border-primary"
+            : "bg-surface border-border"
+        }`}
+      >
+        <Text
+          className={`text-center font-semibold ${
+            state.conditions.energy === energy
+              ? "text-background"
+              : "text-foreground"
+          }`}
+        >
+          {energy === "on" ? "Ligada" : "Desligada"}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+</View>
+
+<View className="gap-3">
+  <Text className="text-lg font-semibold text-foreground">Água</Text>
+
+  <View className="flex-row gap-2">
+    {["on", "off"].map((water) => (
+      <Pressable
+        key={water}
+        onPress={() => updateConditions({ water: water as any })}
+        className={`flex-1 px-4 py-3 rounded-xl border ${
+          state.conditions.water === water
+            ? "bg-primary border-primary"
+            : "bg-surface border-border"
+        }`}
+      >
+        <Text
+          className={`text-center font-semibold ${
+            state.conditions.water === water
+              ? "text-background"
+              : "text-foreground"
+          }`}
+        >
+          {water === "on" ? "Ligada" : "Desligada"}
+        </Text>
+      </Pressable>
+    ))}
+  </View>
+</View>
+
+              <View className="gap-3">
                 <Text className="text-lg font-semibold text-foreground">Responsabilidade Técnica</Text>
                 <View className="flex-row gap-2">
                   <Pressable
@@ -325,7 +413,7 @@ function getCurrentTime() {
                   />
                 </View>
               )}
-
+              
               <View className="gap-3 mt-4">
                 <LargeButton title="Próximo" onPress={handleNext} variant="primary" />
                 <Pressable onPress={() => router.back()}>

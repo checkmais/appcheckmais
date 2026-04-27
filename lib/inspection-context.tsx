@@ -237,6 +237,11 @@ const defaultState: InspectionState = {
     access: "total",
     lighting: "adequate",
     occupancy: "empty",
+
+    cleaning: "",
+    energy: "",
+    water: "",
+
     artMode: "without_art",
     artNumber: "",
     artDate: "",
