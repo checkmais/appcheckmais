@@ -21,18 +21,19 @@ import * as Haptics from "expo-haptics";
 
 export default function ClientDataScreen() {
   const {
-    state,
-    updateClient,
-    updateVistoriador,
-    updateRental,
-  } = useInspection();
+  state,
+  updateClient,
+  updateVistoriador,
+  updateRental,
+  reset,
+} = useInspection();
 
   const { formatDocument } = useDocumentMask();
   const [showToast, setShowToast] = useState(false);
   const router = useRouter();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
 
-  const rental = state.rental;
+  const rental = state.rental!;
 
   const handleNext = async () => {
   if (state.type === "technical" && !state.vistoriador.crea && !state.vistoriador.cau) {
@@ -383,7 +384,7 @@ export default function ClientDataScreen() {
                 </View>
               )}
 
-              {state.type === "rental" && rental && (
+              {state.type === "rental" && (
                 <View className="gap-6">
                   <View className="gap-4">
                     <Text className="text-lg font-semibold text-foreground">
@@ -924,15 +925,32 @@ export default function ClientDataScreen() {
                 </View>
               )}
 
-              <View className="gap-3 mt-4">
-                <LargeButton title="Próximo" onPress={handleNext} variant="primary" />
+              <<View className="gap-3 mt-4">
+  <LargeButton title="Próximo" onPress={handleNext} variant="primary" />
 
-                <Pressable onPress={() => router.back()}>
-                  <Text className="text-center text-primary font-semibold">
-                    Voltar
-                  </Text>
-                </Pressable>
-              </View>
+  <Pressable onPress={() => router.back()}>
+    <Text className="text-center text-primary font-semibold">
+      Voltar
+    </Text>
+  </Pressable>
+
+  <Pressable
+    onPress={() => {
+      reset();
+      router.replace("/");
+    }}
+    style={{
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: "#fee2e2",
+      alignItems: "center",
+    }}
+  >
+    <Text style={{ color: "#dc2626", fontWeight: "700" }}>
+      Limpar dados da vistoria
+    </Text>
+  </Pressable>
+</View>
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>

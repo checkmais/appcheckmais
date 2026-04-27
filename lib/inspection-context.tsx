@@ -132,6 +132,52 @@ export interface InspectionState {
   currentInspectionId: string | null;
   createdAt: string;
   updatedAt: string;
+
+  rental?: {
+  type: "entry" | "exit"; // entrada ou saída
+
+  property: {
+    type: string; // casa, apto
+    address: AddressData;
+    condominium?: string;
+    unit?: string;
+    garageSpots?: string;
+  };
+
+  parties: {
+    landlord: {
+      name: string;
+      document: string;
+    };
+    tenant: {
+      name: string;
+      document: string;
+    };
+    realEstate?: {
+      name: string;
+      document: string;
+    };
+  };
+
+  contract: {
+    number: string;
+    startDate: string;
+    inspectionDate: string;
+  };
+
+  keys: {
+    mainDoor: number;
+    garage: number;
+    mailbox: number;
+    others: string;
+  };
+
+  meters: {
+    energy: string;
+    water: string;
+    gas: string;
+  };
+};
 }
 
 export interface InspectionContextType {
@@ -147,6 +193,7 @@ export interface InspectionContextType {
   loadInspectionState: (data: InspectionState) => void;
   setCurrentInspectionId: (id: string | null) => void;
   reset: () => Promise<void>;
+  updateRental: (data: Partial<InspectionState["rental"]>) => void;
 }
 
 const STORAGE_KEY = "@checkmais_current_inspection";
@@ -201,6 +248,43 @@ const defaultState: InspectionState = {
   currentInspectionId: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+
+  rental: {
+  type: "entry",
+
+  property: {
+    type: "",
+    address: { ...defaultAddress },
+    condominium: "",
+    unit: "",
+    garageSpots: "",
+  },
+
+  parties: {
+    landlord: { name: "", document: "" },
+    tenant: { name: "", document: "" },
+    realEstate: { name: "", document: "" },
+  },
+
+  contract: {
+    number: "",
+    startDate: "",
+    inspectionDate: "",
+  },
+
+  keys: {
+    mainDoor: 0,
+    garage: 0,
+    mailbox: 0,
+    others: "",
+  },
+
+  meters: {
+    energy: "",
+    water: "",
+    gas: "",
+  },
+},
 };
 
 type Action =
@@ -214,6 +298,7 @@ type Action =
   | { type: "DELETE_ROOM"; payload: string }
   | { type: "LOAD_INSPECTION"; payload: InspectionState }
   | { type: "SET_CURRENT_INSPECTION_ID"; payload: string | null }
+  | { type: "UPDATE_RENTAL"; payload: Partial<InspectionState["rental"]> }
   | { type: "RESET" };
 
 function inspectionReducer(state: InspectionState, action: Action): InspectionState {
@@ -304,10 +389,12 @@ function inspectionReducer(state: InspectionState, action: Action): InspectionSt
   };
 
     case "LOAD_INSPECTION":
-      return {
-        ...action.payload,
-        updatedAt: new Date().toISOString(),
-      };
+  return {
+    ...defaultState,
+    ...action.payload,
+    rental: action.payload.rental || defaultState.rental,
+    updatedAt: new Date().toISOString(),
+  };
 
     case "SET_CURRENT_INSPECTION_ID":
       return {
@@ -315,6 +402,16 @@ function inspectionReducer(state: InspectionState, action: Action): InspectionSt
         currentInspectionId: action.payload,
         updatedAt: new Date().toISOString(),
       };
+
+      case "UPDATE_RENTAL":
+  return {
+    ...state,
+    rental: {
+      ...state.rental,
+      ...action.payload,
+    },
+    updatedAt: new Date().toISOString(),
+  };
 
     case "RESET":
       return {
@@ -393,6 +490,9 @@ export function InspectionProvider({ children }: { children: React.ReactNode }) 
 
     setCurrentInspectionId: (id) =>
       dispatch({ type: "SET_CURRENT_INSPECTION_ID", payload: id }),
+
+    updateRental: (data) =>
+      dispatch({ type: "UPDATE_RENTAL", payload: data }),
 
     reset: async () => {
       try {
