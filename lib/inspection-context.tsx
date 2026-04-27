@@ -137,7 +137,7 @@ export interface InspectionState {
   type: "entry" | "exit"; // entrada ou saída
   referenceInspectionId?: string;
 
-  property: {
+    property: {
     type: string; // casa, apto
     address: AddressData;
     condominium?: string;
@@ -257,7 +257,6 @@ const defaultState: InspectionState = {
 
   rental: {
   type: "entry",
-
   referenceInspectionId: "", 
 
   property: {
