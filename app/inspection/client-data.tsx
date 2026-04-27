@@ -35,47 +35,27 @@ export default function ClientDataScreen() {
   const rental = state.rental;
 
   const handleNext = async () => {
-    if (state.type === "rental") {
-      if (
-        !state.vistoriador.name ||
-        !rental?.parties.landlord.name ||
-        !rental?.parties.tenant.name
-      ) {
-        if (Platform.OS !== "web") {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
-        return;
-      }
-    } else {
-      if (!state.client.fullName || !state.vistoriador.name) {
-        if (Platform.OS !== "web") {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
-        return;
-      }
-    }
-
-    if (state.type === "technical" && !state.vistoriador.crea && !state.vistoriador.cau) {
-      if (Platform.OS !== "web") {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-      return;
-    }
-
+  if (state.type === "technical" && !state.vistoriador.crea && !state.vistoriador.cau) {
     if (Platform.OS !== "web") {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    return;
+  }
 
-    setShowToast(true);
+  if (Platform.OS !== "web") {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }
 
-    setTimeout(() => {
-      if (returnTo === "summary") {
-        router.push("/inspection/summary");
-      } else {
-        router.push("/inspection/conditions");
-      }
-    }, 500);
-  };
+  setShowToast(true);
+
+  setTimeout(() => {
+    if (returnTo === "summary") {
+      router.push("/inspection/summary");
+    } else {
+      router.push("/inspection/conditions");
+    }
+  }, 500);
+};
 
   return (
     <ScreenContainer className="p-6">
