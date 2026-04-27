@@ -33,7 +33,45 @@ export default function ClientDataScreen() {
   const router = useRouter();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
 
-  const rental = state.rental!;
+  const rental = state.rental || {
+  type: "entry",
+  property: {
+    type: "",
+    address: {
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      cep: "",
+    },
+    condominium: "",
+    unit: "",
+    garageSpots: "",
+  },
+  parties: {
+    landlord: { name: "", document: "" },
+    tenant: { name: "", document: "" },
+    realEstate: { name: "", document: "" },
+  },
+  contract: {
+    number: "",
+    startDate: "",
+    inspectionDate: "",
+  },
+  keys: {
+    mainDoor: 0,
+    garage: 0,
+    mailbox: 0,
+    others: "",
+  },
+  meters: {
+    energy: "",
+    water: "",
+    gas: "",
+  },
+};
 
   const handleNext = async () => {
   if (state.type === "technical" && !state.vistoriador.crea && !state.vistoriador.cau) {
@@ -925,7 +963,7 @@ export default function ClientDataScreen() {
                 </View>
               )}
 
-              <<View className="gap-3 mt-4">
+              <View className="gap-3 mt-4">
   <LargeButton title="Próximo" onPress={handleNext} variant="primary" />
 
   <Pressable onPress={() => router.back()}>
