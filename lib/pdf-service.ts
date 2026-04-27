@@ -168,14 +168,44 @@ function buildLegalText(state: any) {
 function renderTechnicalExtra(test: any, state: any) {
   if (state.type !== "technical") return "";
 
-  const selectedSeverityHtml =
+  // 🔹 Critério objetivo baseado no status
+  let selectedCriteria = "";
+
+  if (test.objectiveCriteria) {
+    if (test.status === "approved") {
+      selectedCriteria = test.objectiveCriteria.approved;
+    } else if (test.status === "rejected") {
+      selectedCriteria = test.objectiveCriteria.rejected;
+    } else if (test.status === "na") {
+      selectedCriteria = test.objectiveCriteria.na;
+    }
+  }
+
+  // 🔹 Base técnica
+  const technicalBasisHtml =
+    test.technicalBasis && test.technicalBasis.length > 0
+      ? `
+      <div class="detail-block">
+        <div class="detail-title">Base técnica / embasamento</div>
+        <ul class="detail-list">
+          ${test.technicalBasis.map((item: string) => `<li>${item}</li>`).join("")}
+        </ul>
+      </div>
+    `
+      : "";
+
+  // 🔹 Criticidade (se reprovado)
+  const severityHtml =
     test.status === "rejected" && test.severity
       ? `
-        <div class="detail-block">
-          <div class="detail-title">Criticidade atribuída em campo</div>
-          <div class="caption-block"><strong>${getSeverityLabel(test.severity)}:</strong> ${getSeverityReportText(test)}</div>
+      <div class="detail-block">
+        <div class="detail-title">Criticidade da não conformidade</div>
+        <div class="caption-block">
+          <strong>${getSeverityLabel(test.severity)}:</strong>
+          ${getSeverityReportText(test)}
         </div>
-      `
+      </div>
+    `
       : "";
 
   return `
@@ -190,7 +220,20 @@ function renderTechnicalExtra(test: any, state: any) {
         : ""
     }
 
-    ${selectedSeverityHtml}
+    ${
+      selectedCriteria
+        ? `
+      <div class="detail-block">
+        <div class="detail-title">Critério objetivo aplicado</div>
+        <div class="caption-block">${selectedCriteria}</div>
+      </div>
+    `
+        : ""
+    }
+
+    ${technicalBasisHtml}
+
+    ${severityHtml}
   `;
 }
 
