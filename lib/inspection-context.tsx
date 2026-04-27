@@ -135,6 +135,7 @@ export interface InspectionState {
 
   rental?: {
   type: "entry" | "exit"; // entrada ou saída
+  referenceInspectionId?: string;
 
   property: {
     type: string; // casa, apto
@@ -257,6 +258,8 @@ const defaultState: InspectionState = {
   rental: {
   type: "entry",
 
+  referenceInspectionId: "", 
+
   property: {
     type: "",
     address: { ...defaultAddress },
@@ -276,8 +279,8 @@ const defaultState: InspectionState = {
     startDate: "",
     inspectionDate: "",
   },
-
-  keys: {
+  
+    keys: {
     mainDoor: 0,
     garage: 0,
     mailbox: 0,
@@ -397,7 +400,10 @@ function inspectionReducer(state: InspectionState, action: Action): InspectionSt
   return {
     ...defaultState,
     ...action.payload,
-    rental: action.payload.rental || defaultState.rental,
+     rental: {
+      ...defaultState.rental,
+      ...action.payload.rental,
+    },
     updatedAt: new Date().toISOString(),
   };
 
