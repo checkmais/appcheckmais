@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect } from "react";
 import { ScreenContainer } from "@/components/screen-container";
 import { LargeButton } from "@/components/large-button";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useInspection } from "@/lib/inspection-context";
 import {
   ChecklistSection,
@@ -72,19 +73,22 @@ export default function ItemsScreen() {
     ? state.rooms.find((room) => room.id === parsedRoomId)
     : null;
 
-  const [sections, setSections] = useState<any[]>(
-    baseChecklist.map((section: any) => ({
-      ...section,
-      tests: section.tests.map((test: any) => ({
-        ...test,
-        photos: test.photos || [],
-        severity: test.severity || "",
-      })),
-    }))
-  );
+  const normalizeSections = (checklist: any[] = []) =>
+  checklist.map((section: any) => ({
+    ...section,
+    tests: (section.tests || []).map((test: any) => ({
+      ...test,
+      photos: test.photos || [],
+      severity: test.severity || "",
+    })),
+  }));
+
+  const [sections, setSections] = useState<any[]>(normalizeSections(baseChecklist));
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [observations, setObservations] = useState("");
+
+  const [entryInspection, setEntryInspection] = useState<any>(null);
 
   const getRoomId = () => existingRoom?.id || `${areaType}_${roomName}`;
 
@@ -104,32 +108,38 @@ export default function ItemsScreen() {
 
   useEffect(() => {
     if (existingRoom) {
-      setSections(
-        existingRoom.sections.map((section: any) => ({
-          ...section,
-          tests: section.tests.map((test: any) => ({
-            ...test,
-            photos: test.photos || [],
-            severity: test.severity || "",
-          })),
-        }))
-      );
+      setSections(normalizeSections(existingRoom.sections || []));
       setObservations(existingRoom.observations || "");
       setExpandedSection(existingRoom.sections[0]?.id || null);
     } else {
-      const freshSections = baseChecklist.map((section: any) => ({
-        ...section,
-        tests: section.tests.map((test: any) => ({
-          ...test,
-          photos: test.photos || [],
-          severity: test.severity || "",
-        })),
-      }));
-      setSections(freshSections);
-      setObservations("");
-      setExpandedSection(freshSections[0]?.id || null);
+  if (
+    state.type === "rental" &&
+    state.rental?.type === "exit" &&
+    entryInspection
+  ) {
+    const entryRoom = entryInspection.rooms?.find(
+      (room: any) =>
+        room.roomName === roomName &&
+        room.areaType === areaType
+    );
+
+    if (entryRoom) {
+      setSections(normalizeSections(entryRoom.sections || []));
+      setExpandedSection(entryRoom.sections?.[0]?.id || null);
+      return;
     }
+  }
+
+  const freshSections = normalizeSections(baseChecklist);
+  setSections(freshSections);
+}
+    
   }, [existingRoom, areaType, inspectionType]);
+
+  useEffect(() => {
+  
+  loadEntryInspection();
+}, [state.rental?.referenceInspectionId]);
 
   const markSectionAsNA = (sectionId: string) => {
   const updatedSections = sections.map((section: any) =>
@@ -253,7 +263,7 @@ const updateCustomField = (
   );
 
   setSections(updatedSections);
-  saveCurrentRoomProgress(updatedSections);
+  
 };
 
 const addPhotoToTest = async (
@@ -433,7 +443,6 @@ const addCustomItem = () => {
 
   setSections(updatedSections);
   saveCurrentRoomProgress(updatedSections);
-  setExpandedSection(customSectionId);
 };
 
   const getSectionSummary = (section: any) => {
@@ -508,6 +517,40 @@ const addCustomItem = () => {
       rejected: { label: "Reprovado", activeBg: "#dc2626" },
       na: { label: "N/A", activeBg: "#9ca3af" },
     };
+
+    const loadEntryInspection = async () => {
+  if (state.type !== "rental") return;
+  if (state.rental?.type !== "exit") return;
+  if (!state.rental?.referenceInspectionId) return;
+
+  const id = state.rental.referenceInspectionId;
+
+  const data = await AsyncStorage.getItem(`inspection_${id}`);
+
+  if (data) {
+    const parsed = JSON.parse(data);
+    setEntryInspection(parsed);
+  }
+};
+const getEntryTest = (sectionId: string, testId: string) => {
+  if (!entryInspection) return null;
+
+  const entryRoom = entryInspection.rooms?.find(
+    (room: any) =>
+      room.roomName === roomName &&
+      room.areaType === areaType
+  );
+
+  if (!entryRoom) return null;
+
+  const entrySection = entryRoom.sections?.find(
+    (section: any) => section.id === sectionId
+  );
+
+  if (!entrySection) return null;
+
+  return entrySection.tests?.find((test: any) => test.id === testId) || null;
+};
       return (
   <ScreenContainer className="p-0">
     <KeyboardAvoidingView
@@ -706,6 +749,61 @@ const addCustomItem = () => {
                       }}
                     >
                       <View style={{ marginBottom: 8 }}>
+                        {state.type === "rental" && state.rental?.type === "exit" && (
+  (() => {
+    const entryTest = getEntryTest(section.id, test.id);
+
+    if (!entryTest) return null;
+
+    const statusLabel =
+      entryTest.status === "approved"
+        ? "Aprovado"
+        : entryTest.status === "rejected"
+        ? "Reprovado"
+        : entryTest.status === "na"
+        ? "N/A"
+        : "Pendente";
+
+    return (
+      <View
+        style={{
+          backgroundColor: "#f8fafc",
+          borderWidth: 1,
+          borderColor: "#e5e7eb",
+          borderRadius: 10,
+          padding: 10,
+          marginBottom: 10,
+        }}
+      >
+        <Text style={{ fontSize: 12, fontWeight: "700", color: "#0a7ea4" }}>
+          Entrada registrada
+        </Text>
+
+        <Text style={{ fontSize: 12, color: "#333", marginTop: 4 }}>
+          Status anterior: {statusLabel}
+        </Text>
+
+        {entryTest.photos?.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginTop: 8 }}
+          >
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {entryTest.photos.map((photo: any) => (
+                <Image
+                  key={photo.id}
+                  source={{ uri: photo.uri }}
+                  style={{ width: 58, height: 58, borderRadius: 8 }}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    );
+  })()
+)}
                         {test.isCustom ? (
                           <View style={{ gap: 8 }}>
                             <View
@@ -759,7 +857,9 @@ const addCustomItem = () => {
                                   "customSectionTitle",
                                   text
                                 )
-                              }
+                                
+                            }
+                            onBlur={() => saveCurrentRoomProgress()}
                               style={{
                                 borderWidth: 0.5,
                                 borderColor: "#e5e7eb",
@@ -784,6 +884,7 @@ const addCustomItem = () => {
                                   text
                                 )
                               }
+                              onBlur={() => saveCurrentRoomProgress()}
                               style={{
                                 borderWidth: 0.5,
                                 borderColor: "#e5e7eb",
@@ -808,7 +909,9 @@ const addCustomItem = () => {
                                     "rejectionLegend",
                                     text
                                   )
+                                
                                 }
+                                onBlur={() => saveCurrentRoomProgress()}
                                 style={{
                                   borderWidth: 0.5,
                                   borderColor: "#e5e7eb",
@@ -1202,9 +1305,11 @@ const addCustomItem = () => {
           );
         })}
 
-        {inspectionType === "simple" && (
-          <Pressable
-            onPress={addCustomItem}
+        {(inspectionType === "simple" ||
+  inspectionType === "technical" ||
+  inspectionType === "rental") && (
+  <Pressable
+    onPress={addCustomItem}
             style={{
               marginTop: 4,
               marginBottom: 10,

@@ -38,13 +38,21 @@ export async function saveInspection(
     const inspections = await getInspectionsList();
 
     const summaryItem = {
-      id,
-      type: inspection.type || "simple",
-      clientName: inspection.client.fullName || "cliente",
-      date: inspection.conditions.date || new Date().toISOString().slice(0, 10),
-      createdAt: inspection.createdAt,
-    };
+  id,
+  type: inspection.type || "simple",
+  clientName: inspection.client.fullName || "cliente",
+  tenantName: inspection.rental?.parties?.tenant?.name || "",
+  ownerName: inspection.rental?.parties?.owner?.name || "",
+  propertyName: inspection.rental?.property?.unit || "",
+  condominium: inspection.rental?.property?.condominium || "",
+  address: inspection.rental?.property?.address || "",
+  realEstate: inspection.rental?.realEstate?.name || "",
+  date: inspection.conditions.date,
+  time: inspection.conditions.time,
+  createdAt: inspection.createdAt,
+};
 
+    
     const existingIndex = inspections.findIndex((item) => item.id === id);
 
     if (existingIndex >= 0) {
@@ -94,7 +102,14 @@ export async function getInspectionsList(): Promise<
 > {
   try {
     const data = await AsyncStorage.getItem(INSPECTIONS_KEY);
-    return data ? JSON.parse(data) : [];
+    const list = data ? JSON.parse(data) : [];
+
+return list.sort((a: any, b: any) => {
+  const dateA = new Date(a.createdAt).getTime();
+  const dateB = new Date(b.createdAt).getTime();
+
+  return dateB - dateA; // 🔥 mais novo primeiro
+});
   } catch (error) {
     console.error("Erro ao obter lista:", error);
     return [];

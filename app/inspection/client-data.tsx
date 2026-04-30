@@ -1,12 +1,15 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ScrollView,
   View,
   Text,
+  TextInput, // 👈 ADICIONA AQUI
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Pressable,
   Keyboard,
+  Modal,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -30,11 +33,15 @@ export default function ClientDataScreen() {
 
   const { formatDocument } = useDocumentMask();
   const [showToast, setShowToast] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const router = useRouter();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
 
   const rental = state.rental || {
   type: "entry",
+  referenceInspectionId: "",
   property: {
     type: "",
     address: {
@@ -56,10 +63,11 @@ export default function ClientDataScreen() {
     realEstate: { name: "", document: "" },
   },
   contract: {
-    number: "",
-    startDate: "",
-    inspectionDate: "",
+  number: "",
+  startDate: "",
+  inspectionDate: "",
   },
+
   keys: {
     mainDoor: 0,
     garage: 0,
@@ -95,9 +103,20 @@ export default function ClientDataScreen() {
     }
   }, 500);
 };
+  const loadHistory = async () => {
+  const data = await AsyncStorage.getItem("inspection_history");
+  const parsed = data ? JSON.parse(data) : [];
 
+  // 🔥 só entrada de locação
+  const filtered = parsed.filter(
+    (item: any) => item.type === "rental" && item.rentalType === "entry"
+  );
+
+  setHistory(filtered);
+};
+  const [search, setSearch] = useState("");
   return (
-    <ScreenContainer className="p-6">
+        <ScreenContainer className="p-6">
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -480,6 +499,60 @@ export default function ClientDataScreen() {
                       </Pressable>
                     </View>
                   </View>
+
+                  {rental.type === "exit" && (
+  <View
+    style={{
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: "#f8fafc",
+      borderWidth: 1,
+      borderColor: "#e5e7eb",
+      gap: 8,
+    }}
+  >
+    <Text style={{ fontSize: 13, fontWeight: "700", color: "#333" }}>
+      Vistoria de entrada vinculada
+    </Text>
+
+    {selectedEntry ? (
+  <View style={{ backgroundColor: "#e0f2fe", padding: 10, borderRadius: 8 }}>
+    <Text style={{ fontWeight: "700", marginBottom: 4 }}>
+      Entrada selecionada
+    </Text>
+    <Text>🏠 {selectedEntry.rental?.property?.unit || "Imóvel"}</Text>
+    <Text style={{ color: "#333" }}>
+      {selectedEntry.rental?.property?.condominium || ""}
+    </Text>
+    <Text style={{ color: "#333" }}>
+      {selectedEntry.rental?.parties?.tenant?.name || ""}
+    </Text>
+  </View>
+) : (
+  <Text style={{ fontSize: 12, color: "#666" }}>
+    Nenhuma vistoria de entrada selecionada ainda.
+  </Text>
+)}
+
+    <Pressable
+      onPress={async () => {
+  await loadHistory();
+  setShowModal(true);
+}}
+
+      style={{
+        padding: 10,
+        borderRadius: 8,
+        backgroundColor: "#e0f2fe",
+        alignItems: "center",
+      }}
+    >
+      <Text style={{ color: "#0a7ea4", fontWeight: "700" }}>
+        Selecionar vistoria de entrada
+      </Text>
+    </Pressable>
+  </View>
+)}
 
                   <View className="gap-4">
                     <Text className="text-lg font-semibold text-foreground">
@@ -999,6 +1072,104 @@ export default function ClientDataScreen() {
         message="Dados salvos com sucesso!"
         onHide={() => setShowToast(false)}
       />
+
+      <Modal visible={showModal} animationType="slide">
+  <View style={{ flex: 1, padding: 20 }}>
+    <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
+      Selecionar vistoria de entrada
+    </Text>
+
+    <TextInput
+  placeholder="Buscar vistoria..."
+  value={search}
+  onChangeText={setSearch}
+  style={{
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    fontSize: 14,
+  }}
+/>
+
+    <ScrollView>
+      {history.length === 0 ? (
+        <Text>Nenhuma vistoria encontrada</Text>
+      ) : (
+        history
+  .filter((item) => {
+    const text = search.toLowerCase();
+
+    const fullText = `
+      ${item.clientName || ""}
+      ${item.propertyName || ""}
+      ${item.tenantName || ""}
+      ${item.ownerName || ""}
+      ${item.condominium || ""}
+      ${item.address || ""}
+      ${item.realEstate || ""}
+    `.toLowerCase();
+
+    return fullText.includes(text);
+  })
+  .map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={async () => {
+  const data = await AsyncStorage.getItem(`inspection_${item.id}`);
+  const entryInspection = data ? JSON.parse(data) : null;
+  
+  setSelectedEntry(entryInspection);
+
+  updateRental({
+    referenceInspectionId: item.id,
+
+    property: entryInspection?.rental?.property || rental.property,
+    parties: entryInspection?.rental?.parties || rental.parties,
+    contract: entryInspection?.rental?.contract || rental.contract,
+    keys: entryInspection?.rental?.keys || rental.keys,
+    meters: entryInspection?.rental?.meters || rental.meters,
+  });
+
+  setShowModal(false);
+}}
+            style={{
+              padding: 12,
+              borderBottomWidth: 1,
+              borderColor: "#eee",
+            }}
+          >
+            <Text style={{ fontWeight: "600" }}>
+              {item.clientName}
+            </Text>
+
+            <Text style={{ fontSize: 12, color: "#666" }}>
+              {item.propertyName}
+            </Text>
+
+            <Text style={{ fontSize: 11, color: "#999" }}>
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+          </Pressable>
+        ))
+      )}
+    </ScrollView>
+
+    <Pressable
+      onPress={() => setShowModal(false)}
+      style={{
+        marginTop: 20,
+        padding: 12,
+        backgroundColor: "#eee",
+        borderRadius: 8,
+        alignItems: "center",
+      }}
+    >
+      <Text>Fechar</Text>
+    </Pressable>
+  </View>
+</Modal>
     </ScreenContainer>
   );
 }

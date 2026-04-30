@@ -16,6 +16,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { LargeButton } from "@/components/large-button";
 import { useInspection } from "@/lib/inspection-context";
 import { saveInspection, savePhotos } from "@/lib/storage-service";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SummaryScreen() {
   const router = useRouter();
@@ -36,10 +37,11 @@ export default function SummaryScreen() {
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editingRoomName, setEditingRoomName] = useState("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    client: true,
-    vistoriador: true,
-    conditions: true,
-  });
+  rental: true,
+  client: true,
+  vistoriador: true,
+  conditions: true,
+});
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -78,8 +80,40 @@ export default function SummaryScreen() {
     setSaving(true);
     try {
       const saved = await saveInspection(state, state.currentInspectionId);
-      const photoCount = await savePhotos(saved.folderPath, state.items, state.rooms);
 
+const existingHistory = await AsyncStorage.getItem("inspection_history");
+const history = existingHistory ? JSON.parse(existingHistory) : [];
+
+const inspectionHistoryItem = {
+  id: saved.id || state.currentInspectionId || `${Date.now()}`,
+  type: state.type,
+  rentalType: state.rental?.type || "",
+  createdAt: new Date().toISOString(),
+  clientName:
+  state.type === "rental"
+    ? state.rental?.parties?.tenant?.name ||
+      state.rental?.parties?.landlord?.name ||
+      "Sem inquilino"
+    : state.client.fullName || "Sem cliente",
+  propertyName:
+    state.type === "rental"
+      ? `${state.rental?.property?.type || "Imóvel"} ${
+          state.rental?.property?.unit || ""
+        }`.trim()
+      : "",
+};
+
+const updatedHistory = [
+  inspectionHistoryItem,
+  ...history.filter((item: any) => item.id !== inspectionHistoryItem.id),
+];
+
+await AsyncStorage.setItem(
+  "inspection_history",
+  JSON.stringify(updatedHistory)
+);
+
+const photoCount = await savePhotos(saved.folderPath, state.items, state.rooms);
       setSaving(false);
       Alert.alert(
         "✅ Vistoria Salva!",
@@ -202,6 +236,53 @@ export default function SummaryScreen() {
               Etapa 4 de 4 — Revise antes de finalizar
             </Text>
           </View>
+
+          {state.type === "rental" && state.rental && (
+  <View style={{ gap: 8 }}>
+    <SectionHeader title="Dados da Locação" section="rental" />
+    {expandedSections.rental && (
+      <SectionCard>
+        <InfoRow
+          label="Tipo"
+          value={state.rental.type === "entry" ? "Entrada" : "Saída"}
+        />
+        <InfoRow label="Proprietário" value={state.rental.parties.landlord.name} />
+        <InfoRow label="CPF/CNPJ Proprietário" value={state.rental.parties.landlord.document} />
+        <InfoRow label="Inquilino" value={state.rental.parties.tenant.name} />
+        <InfoRow label="CPF/CNPJ Inquilino" value={state.rental.parties.tenant.document} />
+        <InfoRow label="Imobiliária" value={state.rental.parties.realEstate?.name || ""} />
+        <InfoRow label="Contrato" value={state.rental.contract.number} />
+        <InfoRow label="Início da Locação" value={state.rental.contract.startDate} />
+        <InfoRow label="Data da Vistoria" value={state.rental.contract.inspectionDate} />
+        <InfoRow
+          label="Imóvel"
+          value={`${state.rental.property.type} ${state.rental.property.unit || ""}`.trim()}
+        />
+        <InfoRow
+          label="Endereço"
+          value={`${state.rental.property.address.street}, ${state.rental.property.address.number}${
+            state.rental.property.address.complement
+              ? ` - ${state.rental.property.address.complement}`
+              : ""
+          }`}
+        />
+        <InfoRow label="Bairro" value={state.rental.property.address.neighborhood} />
+        <InfoRow
+          label="Cidade/UF"
+          value={`${state.rental.property.address.city} - ${state.rental.property.address.state}`}
+        />
+        <InfoRow label="CEP" value={state.rental.property.address.cep} />
+        <InfoRow label="Chaves porta principal" value={String(state.rental.keys.mainDoor)} />
+        <InfoRow label="Controle garagem" value={String(state.rental.keys.garage)} />
+        <InfoRow label="Chave correio" value={String(state.rental.keys.mailbox)} />
+        <InfoRow label="Outras chaves" value={state.rental.keys.others} />
+        <InfoRow label="Energia" value={state.rental.meters.energy} />
+        <InfoRow label="Água" value={state.rental.meters.water} />
+        <InfoRow label="Gás" value={state.rental.meters.gas} />
+      </SectionCard>
+    )}
+  </View>
+)}
 
           <View style={{ gap: 8 }}>
             <SectionHeader title="Cliente (Contratante)" section="client" />

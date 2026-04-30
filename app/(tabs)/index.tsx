@@ -1,4 +1,11 @@
-import { ScrollView, View, Text, ActivityIndicator } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  ActivityIndicator,
+  TextInput,
+  Pressable,
+} from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ScreenContainer } from "@/components/screen-container";
@@ -19,6 +26,8 @@ export default function HomeScreen() {
     }, [])
   );
 
+  const [typeFilter, setTypeFilter] = useState<"all" | "simple" | "technical" | "rental">("all");
+
   const loadInspections = async () => {
     try {
       setIsLoading(true);
@@ -32,6 +41,9 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   };
+
+  const [search, setSearch] = useState("");
+const [visibleLimit, setVisibleLimit] = useState(10);
 
   const handleTechnicalInspection = () => {
     setInspectionType("technical");
@@ -118,28 +130,162 @@ export default function HomeScreen() {
           </View>
 
           {/* History Section */}
-          {isLoading ? (
-            <View className="items-center justify-center py-8">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : inspections.length > 0 ? (
-            <View className="gap-3">
-              <Text className="text-lg font-semibold text-foreground">Histórico de Vistorias</Text>
-              {inspections.map((inspection) => (
-                <HistoryCard
-                  key={inspection.id}
-                  type={inspection.type}
-                  clientName={inspection.clientName}
-                  date={new Date(inspection.createdAt).toLocaleDateString("pt-BR")}
-                  onPress={() => handleOpenInspection(inspection.id)}
-                />
-              ))}
-            </View>
-          ) : (
-            <View className="items-center justify-center py-8">
-              <Text className="text-muted text-center">Nenhuma vistoria realizada ainda</Text>
-            </View>
-          )}
+{isLoading ? (
+  <View className="items-center justify-center py-8">
+    <ActivityIndicator size="large" />
+  </View>
+) : inspections.length > 0 ? (
+  <View className="gap-3">
+    <Text className="text-lg font-semibold text-foreground">
+      Histórico de Vistorias
+    </Text>
+
+    <TextInput
+      placeholder="Buscar por nome, imóvel, data ou tipo..."
+      value={search}
+      onChangeText={(text) => {
+        setSearch(text);
+        setVisibleLimit(10);
+      }}
+      style={{
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 10,
+        padding: 12,
+        fontSize: 14,
+        backgroundColor: "#fff",
+      }}
+    />
+
+    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+  {[
+    { key: "all", label: "Todos" },
+    { key: "simple", label: "Simples" },
+    { key: "technical", label: "Técnica" },
+    { key: "rental", label: "Locação" },
+  ].map((filter) => (
+    <Pressable
+      key={filter.key}
+      onPress={() => {
+        setTypeFilter(filter.key as any);
+        setVisibleLimit(10);
+      }}
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: typeFilter === filter.key ? "#0a7ea4" : "#f3f4f6",
+      }}
+    >
+      <Text
+        style={{
+          color: typeFilter === filter.key ? "white" : "#333",
+          fontWeight: "700",
+          fontSize: 12,
+        }}
+      >
+        {filter.label}
+      </Text>
+    </Pressable>
+  ))}
+</View>
+
+    {inspections
+      .filter((item) => {
+        if (typeFilter !== "all" && item.type !== typeFilter) return false;
+        
+        const text = search.toLowerCase();
+
+        const typeLabel =
+          item.type === "technical"
+            ? "técnica tecnica"
+            : item.type === "rental"
+            ? "locação locacao aluguel"
+            : "simples";
+
+        return (
+          item.clientName?.toLowerCase().includes(text) ||
+          item.date?.toLowerCase().includes(text) ||
+          item.time?.toLowerCase().includes(text) ||
+          item.type?.toLowerCase().includes(text) ||
+          typeLabel.includes(text)
+        );
+      })
+      .slice(0, visibleLimit)
+      .map((inspection) => (
+        <HistoryCard
+          key={inspection.id}
+          type={inspection.type}
+          clientName={inspection.clientName}
+          date={inspection.date}
+          time={inspection.time}
+          onPress={() => handleOpenInspection(inspection.id)}
+        />
+      ))}
+
+    {inspections.filter((item) => {
+      const text = search.toLowerCase();
+
+      const typeLabel =
+        item.type === "technical"
+          ? "técnica tecnica"
+          : item.type === "rental"
+          ? "locação locacao aluguel"
+          : "simples";
+
+      return (
+        item.clientName?.toLowerCase().includes(text) ||
+        item.date?.toLowerCase().includes(text) ||
+        item.time?.toLowerCase().includes(text) ||
+        item.type?.toLowerCase().includes(text) ||
+        typeLabel.includes(text)
+      );
+    }).length === 0 && (
+      <Text className="text-muted text-center py-4">
+        Nenhuma vistoria encontrada
+      </Text>
+    )}
+
+    {inspections.filter((item) => {
+      const text = search.toLowerCase();
+
+      const typeLabel =
+        item.type === "technical"
+          ? "técnica tecnica"
+          : item.type === "rental"
+          ? "locação locacao aluguel"
+          : "simples";
+
+      return (
+        item.clientName?.toLowerCase().includes(text) ||
+        item.date?.toLowerCase().includes(text) ||
+        item.time?.toLowerCase().includes(text) ||
+        item.type?.toLowerCase().includes(text) ||
+        typeLabel.includes(text)
+      );
+    }).length > visibleLimit && (
+      <Pressable
+        onPress={() => setVisibleLimit((prev) => prev + 10)}
+        style={{
+          padding: 12,
+          borderRadius: 10,
+          backgroundColor: "#e0f2fe",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "#0a7ea4", fontWeight: "700" }}>
+          Carregar mais 10
+        </Text>
+      </Pressable>
+    )}
+  </View>
+) : (
+  <View className="items-center justify-center py-8">
+    <Text className="text-muted text-center">
+      Nenhuma vistoria realizada ainda
+    </Text>
+  </View>
+)}
         </View>
       </ScrollView>
     </ScreenContainer>

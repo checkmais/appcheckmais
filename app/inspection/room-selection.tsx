@@ -1,4 +1,14 @@
-import { ScrollView, View, Text, Pressable, TextInput, FlatList, Alert } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  FlatList,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ScreenContainer } from "@/components/screen-container";
@@ -6,7 +16,6 @@ import { LargeButton } from "@/components/large-button";
 import { useInspection } from "@/lib/inspection-context";
 import { SUGGESTED_ROOMS, SUGGESTED_EXTERNAL_AREAS, AreaType } from "@/lib/checklist-data";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
 
 export default function RoomSelectionScreen() {
   const router = useRouter();
@@ -93,11 +102,17 @@ export default function RoomSelectionScreen() {
   };
 
   return (
-    <ScreenContainer className="p-6">
+  <ScreenContainer className="p-6">
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+    >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 260 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View className="gap-6 pb-6">
           <View className="gap-2">
@@ -285,7 +300,8 @@ export default function RoomSelectionScreen() {
             </Pressable>
           </View>
         </View>
-      </ScrollView>
-    </ScreenContainer>
-  );
+            </ScrollView>
+    </KeyboardAvoidingView>
+  </ScreenContainer>
+);
 }
